@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"net"
 )
 
 func GenRandomToken() string {
@@ -170,3 +171,23 @@ func GetDurationString(t_now time.Time, t_expire time.Time) (ret string) {
 	}
 	return
 }
+
+func ReverseIPAddress(ip net.IP) string {
+
+	if ip.To4() != nil {
+		addressSlice := strings.Split(ip.String(), ".")
+		reverseSlice := []string{}
+
+		for i := range addressSlice {
+			octet := addressSlice[len(addressSlice)-1-i]
+			reverseSlice = append(reverseSlice, octet)
+		}
+
+		return strings.Join(reverseSlice, ".")
+
+	} else {
+		panic("invalid IPv4 address")
+	}
+}
+
+
