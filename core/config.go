@@ -156,6 +156,11 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 	}
 
 	c.cfg.UnmarshalKey(CFG_GENERAL, &c.general)
+	if c.cfg.Get("general.autocert") == nil {
+		c.cfg.Set("general.autocert", true)
+		c.general.Autocert = true
+	}
+
 	c.cfg.UnmarshalKey(CFG_BLACKLIST, &c.blacklistConfig)
 
 	if c.general.OldIpv4 != "" {
@@ -178,6 +183,9 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 	if c.general.DnsPort == 0 {
 		c.SetDnsPort(53)
 	}
+	if created_cfg {
+		c.EnableAutocert(true)
+	}
 
 	c.lures = []*Lure{}
 	c.cfg.UnmarshalKey(CFG_LURES, &c.lures)
@@ -190,6 +198,7 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 		c.lureIds = append(c.lureIds, GenRandomToken())
 	}
 
+	c.cfg.WriteConfig()
 	return c, nil
 }
 
@@ -461,6 +470,17 @@ func (c *Config) SetUnauthUrl(_url string) {
 	c.general.UnauthUrl = _url
 	c.cfg.Set(CFG_GENERAL, c.general)
 	log.Info("unauthorized request redirection URL set to: %s", _url)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) EnableAutocert(enabled bool) {
+	c.general.Autocert = enabled
+	if enabled {
+		log.Info("autocert is now enabled")
+	} else {
+		log.Info("autocert is now disabled")
+	}
+	c.cfg.Set(CFG_GENERAL, c.general)
 	c.cfg.WriteConfig()
 }
 
@@ -771,4 +791,8 @@ func (c *Config) GetRedirectorsDir() string {
 
 func (c *Config) GetBlacklistMode() string {
 	return c.blacklistConfig.Mode
+}
+
+func (c *Config) IsAutocertEnabled() bool {
+	return c.general.Autocert
 }

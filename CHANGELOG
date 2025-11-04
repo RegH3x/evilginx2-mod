@@ -1,4 +1,6 @@
 # Unreleased
+- Feature: Added support to load custom TLS certificates from a public certificate file and a private key file stored in `~/.evilginx/crt/sites/<hostname>/`. Will load `fullchain.pem` and `privkey.pem` pair or a combination of a `.pem`/`.crt` (public certificate) and a `.key` (private key) file. Make sure to run without `-developer` flag and disable autocert retrieval with `config autocert off`.
+- Feature: Added ability to disable automated TLS certificate retrieval from LetsEncrypt with `config autocert <on/off>`.
 - Fixed: Added support for exported cookies with names prefixed with `__Host-` and `__Secure-`.
 
 # 3.2.0
