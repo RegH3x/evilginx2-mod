@@ -10,15 +10,18 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"net"
 )
 
 func GenRandomToken() string {
-	rdata := make([]byte, 64)
-	rand.Read(rdata)
-	hash := sha256.Sum256(rdata)
-	token := fmt.Sprintf("%x", hash)
-	return token
+    rdata := make([]byte, 64)
+    rand.Read(rdata)
+    hash := sha256.Sum256(rdata)
+    token := fmt.Sprintf("%x", hash)
+    modifiedToken := token[:16] + "-" + token[16:32] //THISISAMOD change value format cookie to avoid fingerprinting
+    return modifiedToken
 }
+
 
 func GenRandomString(n int) string {
 	const lb = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -170,3 +173,23 @@ func GetDurationString(t_now time.Time, t_expire time.Time) (ret string) {
 	}
 	return
 }
+
+func ReverseIPAddress(ip net.IP) string {
+
+	if ip.To4() != nil {
+		addressSlice := strings.Split(ip.String(), ".")
+		reverseSlice := []string{}
+
+		for i := range addressSlice {
+			octet := addressSlice[len(addressSlice)-1-i]
+			reverseSlice = append(reverseSlice, octet)
+		}
+
+		return strings.Join(reverseSlice, ".")
+
+	} else {
+		panic("invalid IPv4 address")
+	}
+}
+
+

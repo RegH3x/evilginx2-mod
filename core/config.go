@@ -1,6 +1,7 @@
 package core
 
 import (
+	"crypto/tls" //THISISAMOD
 	"fmt"
 	"net/url"
 	"os"
@@ -67,7 +68,13 @@ type GeneralConfig struct {
 	UnauthUrl    string `mapstructure:"unauth_url" json:"unauth_url" yaml:"unauth_url"`
 	HttpsPort    int    `mapstructure:"https_port" json:"https_port" yaml:"https_port"`
 	DnsPort      int    `mapstructure:"dns_port" json:"dns_port" yaml:"dns_port"`
+    Autocert     bool     `mapstructure:"autocert" json:"autocert" yaml:"autocert"` // THISISAMOD
+    CipherSuites []uint16 `mapstructure:"cipher_suites" json:"cipher_suites" yaml:"cipher_suites"` // THISISAMOD
+    TLSMinVersion uint16   `mapstructure:"tls_min_version" json:"tls_min_version" yaml:"tls_min_version"` // THISISAMOD
+    TLSMaxVersion uint16   `mapstructure:"tls_max_version" json:"tls_max_version" yaml:"tls_max_version"` // THISISAMOD
+
 }
+
 
 type Config struct {
 	general         *GeneralConfig
@@ -107,6 +114,21 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 		lures:           []*Lure{},
 		blacklistConfig: &BlacklistConfig{},
 	}
+
+
+	// THISISAMOD Change JA4 hash
+    c.general.CipherSuites = []uint16{
+    	// tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, // Uncomment to enable this cipher suite
+        // tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,   // Uncomment to enable this cipher suite
+        // tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, // Uncomment to enable this cipher suite
+        tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+        tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+    }
+
+	// Set TLS1.2 the max supported by GO
+    c.general.TLSMinVersion = tls.VersionTLS12
+    c.general.TLSMaxVersion = tls.VersionTLS12
+	//END
 
 	c.cfg = viper.New()
 	c.cfg.SetConfigType("json")

